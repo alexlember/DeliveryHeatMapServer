@@ -19,13 +19,34 @@ def geocode_deliveries(deliveries):
     """
 
     for delivery in deliveries:
-        if delivery.latitude is None \
-           or delivery.longitude is None \
-           or delivery.latitude == 0.0 \
-           or delivery.longitude == 0.0:
-            coords = get_coords(Address(delivery.city, delivery.street, delivery.house, delivery.building))
-            delivery.longitude = coords.longitude
-            delivery.latitude = coords.latitude
+        if delivery.Latitude is None \
+           or delivery.Longitude is None \
+           or delivery.Latitude == 0.0 \
+           or delivery.Longitude == 0.0:
+            coords = get_coords(Address('Москва'.decode("utf-8"),
+                                        delivery.Street,
+                                        delivery.Home,
+                                        delivery.Building))
+            delivery.Longitude = coords.Longitude
+            delivery.Latitude = coords.Latitude
+            delivery.save()
+
+
+def drop_coords(deliveries):
+    """
+
+    Метод производит геокодирование для тех доставок, у которых нет координат.
+
+    :param deliveries: список доставок для геокодирования.
+    :return: обновляет доставки в БД.
+
+    """
+
+    for delivery in deliveries:
+
+            delivery.Longitude = 0.0
+            delivery.Latitude = 0.0
+            delivery.save()
 
 
 def get_coords(delivery_address):
@@ -40,7 +61,7 @@ def get_coords(delivery_address):
     params = delivery_address.city + "+" + delivery_address.street + "+" + str(delivery_address.house)
 
     if delivery_address.building is not None:
-        params += str(delivery_address.building)
+        params += "+" + str(delivery_address.building)
 
     url = 'https://geocode-maps.yandex.ru/1.x/?format=json&geocode=' + params
 
@@ -50,8 +71,8 @@ def get_coords(delivery_address):
     json_dict = json_string['response']['GeoObjectCollection']['featureMember']
     object_coords = json_dict[0]['GeoObject']['Point']['pos']
     splitted_coords = object_coords.split()
-    longitude = (float)(splitted_coords[0].encode('utf-8'))
-    latitude = (float)(splitted_coords[1].encode('utf-8'))
+    longitude = float(splitted_coords[0].encode('utf-8'))
+    latitude = float(splitted_coords[1].encode('utf-8'))
 
     # print "longitude: %s, latitude: %s" % (repr(longitude), repr(latitude))
     print("ok")

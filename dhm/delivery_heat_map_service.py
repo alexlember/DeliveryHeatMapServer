@@ -2,11 +2,20 @@
 
 import datetime
 import math
+
+import datetime  # import datetime, timedelta
+from datetime import timedelta
+
+import dateutil.parser
+import pytz
+from pytz import timezone
+
 from dhm.custom_classes.delivery_heat_map_enum_parameters import DeliveryHeatMapPolygonSize, DeliveryHeatMapReportType
 from dhm.custom_classes.delivery_heat_map_info import DeliveryHeatMapInfo
 from dhm.custom_classes.polygon_indexes import PolygonIndexes
 from dhm.custom_classes.coordinates import Coordinates
-from geocoder import geocode_deliveries
+from dhm.models import Delivery
+from geocoder import geocode_deliveries, drop_coords
 from dhm.custom_classes.delivery_polygon import DeliveryPolygon
 
 """Радиус Земли в метрах."""
@@ -19,12 +28,12 @@ RADIANS_PER_DEGREE = math.pi / 180
 DEGREES_IN_500_METERS = 0.001
 
 
-def get_delivery_heat_map(user_id, date_from, date_to, polygon_side_in_meters, report_type):
+def get_delivery_heat_map(user_id, map_filters):
     """
 
     Метод для формирования объекта тепловой карты.
 
-    :param organization_id: Идентификатор организации, для которой строится тепловая карта.
+    :param user_id: Идентификатор пользователя, для которого строится тепловая карта.
     :param date_from: Дата, начиная с которой следует включать доставки.
     :param date_to: Дата, по которую следует включать доставки.
     :param polygon_side_in_meters: Длина стороны полигона в метрах.
@@ -33,57 +42,68 @@ def get_delivery_heat_map(user_id, date_from, date_to, polygon_side_in_meters, r
 
     """
 
-    deliveries = get_deliveries(organization_id)
+    deliveries = get_deliveries(user_id, map_filters['from_date'], map_filters['to_date'])
+
+    #drop_coords(deliveries)
 
     geocode_deliveries(deliveries)
 
     min_max_coordinates = find_min_max_coordinates(deliveries)
 
-    number_of_polygons_n_grip_step_in_degrees = calculate_number_of_polygons(polygon_side_in_meters,
+    number_of_polygons_n_grid_step_in_degrees = calculate_number_of_polygons(map_filters['polygon_size'],
                                                                              min_max_coordinates)
 
     polygons = calculate_polygons(deliveries,
-                                  report_type,
-                                  number_of_polygons_n_grip_step_in_degrees,
+                                  map_filters['report_type'],
+                                  number_of_polygons_n_grid_step_in_degrees,
                                   min_max_coordinates)
 
     sorted_polygons = polygons_sort_by_value(polygons)
 
     center_coordinates = calculate_center_coordinates(sorted_polygons)
 
+    if center_coordinates is None:
+        return {'Success': False, 'Message': 'No current polygons no center'}
+
     delivery_heat_map = DeliveryHeatMapInfo(sorted_polygons,
-                                            number_of_polygons_n_grip_step_in_degrees['x_number_of_polygons'],
-                                            number_of_polygons_n_grip_step_in_degrees['y_number_of_polygons'],
-                                            center_coordinates.latitude,
-                                            center_coordinates.longitude,
+                                            number_of_polygons_n_grid_step_in_degrees['x_number_of_polygons'],
+                                            number_of_polygons_n_grid_step_in_degrees['y_number_of_polygons'],
+                                            center_coordinates.Latitude,
+                                            center_coordinates.Longitude,
                                             4,
-                                            min_max_coordinates['min_latitude'],
-                                            min_max_coordinates['max_latitude'],
-                                            min_max_coordinates['min_longitude'],
-                                            min_max_coordinates['max_longitude'],
-                                            number_of_polygons_n_grip_step_in_degrees['width'],
-                                            number_of_polygons_n_grip_step_in_degrees['height'])
+                                            float(min_max_coordinates['min_latitude']),
+                                            float(min_max_coordinates['max_latitude']),
+                                            float(min_max_coordinates['min_longitude']),
+                                            float(min_max_coordinates['max_longitude']),
+                                            float(number_of_polygons_n_grid_step_in_degrees['width']),
+                                            float(number_of_polygons_n_grid_step_in_degrees['height']))
 
     return delivery_heat_map
 
 
-def get_deliveries(organization_id):
+def get_deliveries(user_id, date_from, date_to):
     """
 
-    Метод извлекает все доставки указанного пользователя, указанной организации из БД.
+    Метод извлекает все доставки указанного пользователя из БД.
 
-    :param organization_id: идентификатор организации.
+    :param date_from: дата начала периода доставок
+    :param date_to: дата окончания периода доставок
+    :param user_id: идентификатор пользователя.
     :return deliveries: список доставок
 
     """
+    date_from_parsed = dateutil.parser.parse(date_from)
+    date_to_parsed = dateutil.parser.parse(date_to)
 
-    valid_deliveries = []  # Создадим пустой список, где будут храниться доставки интересующей нас организации.
+    valid_deliveries = Delivery.objects.filter(UserId=user_id,
+                                               DeliveryCompleteDateTime__gt=datetime.date(date_from_parsed.year,
+                                                                                          date_from_parsed.month,
+                                                                                          date_from_parsed.day),
+                                               DeliveryCompleteDateTime__lt=datetime.date(date_to_parsed.year,
+                                                                                          date_to_parsed.month,
+                                                                                          date_to_parsed.day))
 
-    for delivery in all_deliveries:
-        if delivery.organization_id == organization_id:
-            valid_deliveries.append(delivery)
-
-    return valid_deliveries
+    return list(valid_deliveries)
 
 
 def find_min_max_coordinates(deliveries):
@@ -104,16 +124,16 @@ def find_min_max_coordinates(deliveries):
     # Прогон по всем доставкам и поиск границы зоны доставок по координатам.
     for delivery in deliveries:
 
-        if delivery.longitude is not None and delivery.latitude is not None:
+        if delivery.Longitude is not None and delivery.Latitude is not None:
 
-            if delivery.latitude > max_latitude:
-                max_latitude = delivery.latitude
-            if delivery.latitude < min_latitude:
-                min_latitude = delivery.latitude
-            if delivery.longitude > max_longitude:
-                max_longitude = delivery.longitude
-            if delivery.longitude < min_longitude:
-                min_longitude = delivery.longitude
+            if delivery.Latitude > max_latitude:
+                max_latitude = delivery.Latitude
+            if delivery.Latitude < min_latitude:
+                min_latitude = delivery.Latitude
+            if delivery.Longitude > max_longitude:
+                max_longitude = delivery.Longitude
+            if delivery.Longitude < min_longitude:
+                min_longitude = delivery.Longitude
 
     min_max_coordinates = {'max_latitude': max_latitude,
                            'min_latitude': min_latitude,
@@ -138,31 +158,31 @@ def calculate_number_of_polygons(polygon_side_in_meters, min_max_coordinates):
     max_coordinates = Coordinates(min_max_coordinates['max_longitude'], min_max_coordinates['max_latitude'])
 
     # Вычисление расстояния между двумя точками в метрах.
-    x_size_in_meters = calculate_distance_between_two_points(min_coordinates.latitude,
-                                                             min_coordinates.longitude,
-                                                             min_coordinates.latitude,
-                                                             max_coordinates.longitude)
+    x_size_in_meters = calculate_distance_between_two_points(min_coordinates.Latitude,
+                                                             min_coordinates.Longitude,
+                                                             min_coordinates.Latitude,
+                                                             max_coordinates.Longitude)
 
-    y_size_in_meters = calculate_distance_between_two_points(min_coordinates.latitude,
-                                                             min_coordinates.longitude,
-                                                             max_coordinates.latitude,
-                                                             min_coordinates.longitude)
+    y_size_in_meters = calculate_distance_between_two_points(min_coordinates.Latitude,
+                                                             min_coordinates.Longitude,
+                                                             max_coordinates.Latitude,
+                                                             min_coordinates.Longitude)
 
     # Вычисление количества прямоугольников по горизонтали и по вертикали.
     if x_size_in_meters != 0.0:
-        x_number_of_polygons = int((x_size_in_meters // polygon_side_in_meters + 1))
+        x_number_of_polygons = int((x_size_in_meters // int(polygon_side_in_meters) + 1))
     else:
         x_number_of_polygons = 0
 
     if y_size_in_meters != 0.0:
-        y_number_of_polygons = int((y_size_in_meters // polygon_side_in_meters + 1))
+        y_number_of_polygons = int((y_size_in_meters // int(polygon_side_in_meters) + 1))
     else:
         y_number_of_polygons = 0
 
     # Установка шага сетки в градусах.
     if x_number_of_polygons > 0 and y_number_of_polygons > 0:
-        width = (max_coordinates.longitude - min_coordinates.longitude) / x_number_of_polygons
-        height = (max_coordinates.latitude - min_coordinates.latitude) / y_number_of_polygons
+        width = (max_coordinates.Longitude - min_coordinates.Longitude) / x_number_of_polygons
+        height = (max_coordinates.Latitude - min_coordinates.Latitude) / y_number_of_polygons
     else:
         width = DEGREES_IN_500_METERS * 2
         height = DEGREES_IN_500_METERS
@@ -189,11 +209,11 @@ def calculate_distance_between_two_points(start_latitude, start_longitude, finis
 
     # Сферическая теорема косинусов.
     angular_distance = math.acos(
-        math.sin(start_latitude * RADIANS_PER_DEGREE) *
-        math.sin(finish_latitude * RADIANS_PER_DEGREE) +
-        math.cos(start_latitude * RADIANS_PER_DEGREE) *
-        math.cos(finish_latitude * RADIANS_PER_DEGREE) *
-        math.cos((start_longitude - finish_longitude) * RADIANS_PER_DEGREE))
+        math.sin(float(start_latitude) * RADIANS_PER_DEGREE) *
+        math.sin(float(finish_latitude) * RADIANS_PER_DEGREE) +
+        math.cos(float(start_latitude) * RADIANS_PER_DEGREE) *
+        math.cos(float(finish_latitude) * RADIANS_PER_DEGREE) *
+        math.cos(float((start_longitude - finish_longitude)) * RADIANS_PER_DEGREE))
 
     # Перевод углового расстояния в метры.
     return angular_distance * EARTH_RADIUS
@@ -213,12 +233,12 @@ def calculate_polygons(deliveries, report_type, number_of_polygons_n_grip_step_i
 
     """
 
-    min_latitude = min_max_coordinates['min_latitude']
-    min_longitude = min_max_coordinates['min_longitude']
+    min_latitude = float(min_max_coordinates['min_latitude'])
+    min_longitude = float(min_max_coordinates['min_longitude'])
     x_number_of_polygons = number_of_polygons_n_grip_step_in_degrees['x_number_of_polygons']
     y_number_of_polygons = number_of_polygons_n_grip_step_in_degrees['y_number_of_polygons']
-    x_step = number_of_polygons_n_grip_step_in_degrees['width']
-    y_step = number_of_polygons_n_grip_step_in_degrees['height']
+    x_step = float(number_of_polygons_n_grip_step_in_degrees['width'])
+    y_step = float(number_of_polygons_n_grip_step_in_degrees['height'])
 
     """
     Словарь для полигонов, уникальный ключ - пара: порядковый номер полигона по вертикали и по горизонтали,
@@ -238,13 +258,13 @@ def calculate_polygons(deliveries, report_type, number_of_polygons_n_grip_step_i
     то он добавляется туда и число доставок устанавливается в 1.
     """
     for delivery in deliveries:
-        if delivery.latitude is not None and delivery.longitude is not None:
+        if delivery.Latitude is not None and delivery.Longitude is not None:
 
             # Cмещение долготы конкретной доставки от крайней левой точки.
-            x_shift = delivery.longitude - min_longitude
+            x_shift = float(delivery.Longitude) - min_longitude
 
             # Cмещение широты конкретной доставки от крайней нижней точки.
-            y_shift = delivery.latitude - min_latitude
+            y_shift = float(delivery.Latitude) - min_latitude
 
             # Текущий номер полигона по горизонтали.
             x_current_polygon = int(x_shift // x_step)
@@ -331,14 +351,16 @@ def calculate_center_coordinates(polygons):
     :return center_coordinates: Пара центральных координат зоны доставки.
 
     """
+    if len(polygons) > 0:
+        center_coordinates = Coordinates(polygons[0].longitude_left_down_corner,
+                                         polygons[0].latitude_left_down_corner)
+        return center_coordinates
+    else:
+        return None
 
-    center_coordinates = Coordinates(polygons[0].longitude_left_down_corner,
-                                     polygons[0].latitude_left_down_corner)
-    return center_coordinates
 
-
-get_delivery_heat_map(1,
-                      datetime.datetime(2015, 11, 10),  # 14, 15, 59, 999999, tzinfo=None),
-                      datetime.datetime(2016, 01, 10),  # 14, 15, 59, 999999, tzinfo=None),
-                      DeliveryHeatMapPolygonSize.FIVE_HUNDRED,
-                      DeliveryHeatMapReportType.DELIVERY_AMOUNT)
+# get_delivery_heat_map(1,
+#                       datetime.datetime(2015, 11, 10),  # 14, 15, 59, 999999, tzinfo=None),
+#                       datetime.datetime(2016, 01, 10),  # 14, 15, 59, 999999, tzinfo=None),
+#                       DeliveryHeatMapPolygonSize.FIVE_HUNDRED,
+#                       DeliveryHeatMapReportType.DELIVERY_AMOUNT)

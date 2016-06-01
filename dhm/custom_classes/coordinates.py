@@ -9,9 +9,9 @@ class Coordinates:
     """
 
     # Координаты Москвы
-    longitude = u'37.611347'
-    latitude = u'55.760241'
+    Longitude = u'37.611347'
+    Latitude = u'55.760241'
 
     def __init__(self, longitude, latitude):
-        self.longitude = longitude
-        self.latitude = latitude
+        self.Longitude = longitude
+        self.Latitude = latitude

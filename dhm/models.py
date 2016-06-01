@@ -6,6 +6,15 @@ from django.db import models
 # Create your models here.
 
 
+# class Animal(models.Model):
+#     AnimalId = models.AutoField(primary_key=True)
+#     AnimalName = models.CharField(max_length=200)
+#     AnimalSound = models.CharField(max_length=200)
+#
+#     def speak(self):
+#         return "The " + self.AnimalName + " says " + self.AnimalSound
+
+
 class DHMUser(models.Model):
 
     """ Класс для табилцы в БД с пользователями. """
@@ -64,5 +73,5 @@ class Delivery(models.Model):
     Street = models.CharField(max_length=200)
     Home = models.PositiveIntegerField()
     Building = models.PositiveIntegerField()
-    Latitude = models.DecimalField(max_digits=5, decimal_places=4)
-    Longitude = models.DecimalField(max_digits=5, decimal_places=4)
+    Latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    Longitude = models.DecimalField(max_digits=9, decimal_places=6)

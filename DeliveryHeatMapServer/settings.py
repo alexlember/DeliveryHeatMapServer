@@ -86,6 +86,7 @@ DATABASES = {
         'PORT': '3306',
         'HOST': '127.0.0.1',
         'OPTIONS': {'charset': 'utf8mb4'},
+        'TEST_NAME': 'auto_tests',
     }
 }
 

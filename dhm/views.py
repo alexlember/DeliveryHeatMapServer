@@ -174,11 +174,14 @@ def heat_map(request):
         }
 
         result = controller.calculate_heat_map(map_filter)
+        if result['Success'] is False:
+            return HttpResponse(status=500, reason=result['Message'])
+        else:
+            return HttpResponse(result['HeatMap'], content_type="application/json")
 
     else:
         return HttpResponse(status=501, reason='Http method ' + request.method + ' is not supported')
 
-    return HttpResponse('Success request')
 
 
 @csrf_exempt

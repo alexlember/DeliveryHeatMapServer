@@ -1,7 +1,11 @@
 # coding=utf-8
+import json
+
 import dateutil.parser
 from django.core.exceptions import ObjectDoesNotExist
+from flask import jsonify
 
+from dhm import delivery_heat_map_service
 from dhm.models import DHMUser, Delivery, DHMProductType, DHMMarketingSource
 from pytz import timezone
 from django.db.utils import IntegrityError
@@ -46,7 +50,12 @@ def calculate_heat_map(map_filter):
     if user is None:
         result = {'Success': False, 'Message': 'No user found with email address: ' + map_filter['user_email']}
     else:
-        result = {'Success': True}
+        delivery_heat_map = delivery_heat_map_service.get_delivery_heat_map(user, map_filter)
+        if delivery_heat_map['Success'] is False:
+            result = {'Success': False, 'Message': delivery_heat_map['Message']}
+        else:
+            dhm_json = json.dumps(delivery_heat_map, default=lambda o: o.__dict__)
+            result = {'Success': True, 'HeatMap': dhm_json}
 
     return result
 
@@ -86,11 +95,9 @@ def save_delivery(delivery_obj):
     if user_id is None:
         result = {'Success': False, 'Message': 'No user found with email address: ' + delivery_obj.user_email}
     else:
-        delivery_order_date_time = dateutil.parser.parse(delivery_obj.delivery_order_date_time) \
-            .astimezone(timezone('US/Pacific'))
+        delivery_order_date_time = dateutil.parser.parse(delivery_obj.delivery_order_date_time)
 
-        delivery_complete_date_time = dateutil.parser.parse(delivery_obj.delivery_complete_date_time) \
-            .astimezone(timezone('US/Pacific'))
+        delivery_complete_date_time = dateutil.parser.parse(delivery_obj.delivery_complete_date_time)
 
         delivery = Delivery(UserId=user_id,
                             DeliveryOrderDateTime=delivery_order_date_time,

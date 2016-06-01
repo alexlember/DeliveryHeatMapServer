@@ -9,12 +9,12 @@ class DeliveryHeatMapReportType(Enum):
     Класс, необходимый для выбора типа отчета для построения тепловой карты.
 
     """
-    DELIVERY_AMOUNT = 'По количеству доставок'  # Число доставок
-    DELIVERY_SUM = 'По суммарному чеку'  # Суммарный чек
-    AVG_CHEQUE = 'По среднему чеку'  # Средний чек
-    AVG_DELAY = 'По среднему времени опоздания'
-    MARKETING_SOURCE = 'По источнику рекламы'
-    PRODUCT_TYPE = 'По типу продукта'
+    DELIVERY_AMOUNT = 'По количеству доставок'.decode('utf-8')  # Число доставок
+    DELIVERY_SUM = 'По суммарному чеку'.decode('utf-8')  # Суммарный чек
+    AVG_CHEQUE = 'По среднему чеку'.decode('utf-8')  # Средний чек
+    AVG_DELAY = 'По среднему времени опоздания'.decode('utf-8')
+    MARKETING_SOURCE = 'По источнику рекламы'.decode('utf-8')
+    PRODUCT_TYPE = 'По типу продукта'.decode('utf-8')
 
     @staticmethod
     def get_list():
