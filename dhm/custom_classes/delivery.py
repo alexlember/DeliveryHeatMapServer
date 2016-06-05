@@ -13,6 +13,7 @@ class DeliveryDTO(object):
     delivery_complete_date_time = ""
     total_sum = 0
 
+
     # The class "constructor" - It's actually an initializer
     def __init__(self,
                  user_email,

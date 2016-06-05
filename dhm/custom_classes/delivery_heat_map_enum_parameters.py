@@ -36,8 +36,7 @@ class DeliveryHeatMapPolygonSize(Enum):
     THREE_HUNDRED = 300  # Размер полигона 300м х 300м
     FIVE_HUNDRED = 500  # Размер полигона 500м х 500м
     ONE_THOUSAND = 1000  # Размер полигона 1000м х 1000м
-    FIVE_THOUSAND = 5000  # Размер полигона 5000м х 5000м
-    FIFTEEN_THOUSAND = 15000  # Размер полигона 5000м х 5000м
+    THREE_THOUSAND = 3000  # Размер полигона 3000м х 3000м
 
     @staticmethod
     def get_list():
@@ -45,8 +44,7 @@ class DeliveryHeatMapPolygonSize(Enum):
                 DeliveryHeatMapPolygonSize.THREE_HUNDRED,
                 DeliveryHeatMapPolygonSize.FIVE_HUNDRED,
                 DeliveryHeatMapPolygonSize.ONE_THOUSAND,
-                DeliveryHeatMapPolygonSize.FIVE_THOUSAND,
-                DeliveryHeatMapPolygonSize.FIFTEEN_THOUSAND]
+                DeliveryHeatMapPolygonSize.THREE_THOUSAND]
 
     # def get_as_str(self):
     #     if self == DeliveryHeatMapPolygonSize.ONE_HUNDRED_FIFTY:

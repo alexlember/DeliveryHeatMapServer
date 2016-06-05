@@ -54,7 +54,7 @@ def calculate_heat_map(map_filter):
         if delivery_heat_map['Success'] is False:
             result = {'Success': False, 'Message': delivery_heat_map['Message']}
         else:
-            dhm_json = json.dumps(delivery_heat_map, default=lambda o: o.__dict__)
+            dhm_json = json.dumps(delivery_heat_map['HeatMap'], default=lambda o: o.__dict__)
             result = {'Success': True, 'HeatMap': dhm_json}
 
     return result

@@ -183,7 +183,6 @@ def heat_map(request):
         return HttpResponse(status=501, reason='Http method ' + request.method + ' is not supported')
 
 
-
 @csrf_exempt
 def filter_values(request):
     # if this is a POST request we need to process the form data

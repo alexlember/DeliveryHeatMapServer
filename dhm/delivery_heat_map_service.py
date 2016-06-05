@@ -78,7 +78,7 @@ def get_delivery_heat_map(user_id, map_filters):
                                             float(number_of_polygons_n_grid_step_in_degrees['width']),
                                             float(number_of_polygons_n_grid_step_in_degrees['height']))
 
-    return delivery_heat_map
+    return {'Success': True, 'HeatMap': delivery_heat_map}
 
 
 def get_deliveries(user_id, date_from, date_to):
@@ -298,7 +298,7 @@ def calculate_polygons(deliveries, report_type, number_of_polygons_n_grip_step_i
             # Если такой полигон уже есть в мапе, то просто переходим к вычислению необходимой величины для отчета.
             polygon_process(polygons_map, key, report_type, delivery)
 
-    if report_type == DeliveryHeatMapReportType.AVG_CHEQUE:
+    if report_type == DeliveryHeatMapReportType.AVG_CHEQUE or report_type == DeliveryHeatMapReportType.AVG_DELAY:
         for key in polygons_map:
             polygons_map[key].value /= polygons_map[key].delivery_amount
 
@@ -324,6 +324,12 @@ def polygon_process(polygons_map, key, report_type, delivery):
         polygon.value += 1
     elif report_type == DeliveryHeatMapReportType.DELIVERY_SUM:
         polygon.add_to_value(delivery.total_sum)
+    elif report_type == DeliveryHeatMapReportType.AVG_CHEQUE:
+        polygon.increment_delivery_amount()
+        polygon.add_to_value(delivery.total_sum)
+    elif report_type == DeliveryHeatMapReportType.AVG_DELAY:
+        polygon.increment_delivery_amount()
+        #polygon.add_to_value(delivery.delivery_complete_date_time - delivery.delivery_order_date_time - 40)
     else:
         polygon.increment_delivery_amount()
         polygon.add_to_value(delivery.total_sum)
